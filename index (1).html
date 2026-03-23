@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KOA PMO — Status Report Automation Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0a0a0f;color:#e8e4d9;font-family:'DM Mono','Courier New',monospace;overflow-x:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#111}::-webkit-scrollbar-thumb{background:#C8A96E44;border-radius:2px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+.fade-in{animation:fadeIn 0.4s ease forwards}
+.pulse{animation:pulse 1.5s infinite}
+.spin{animation:spin 1.5s linear infinite;display:inline-block}
+.blink{animation:blink 0.8s infinite}
+#app{min-height:100vh;position:relative}
+#app::before{content:"";position:fixed;inset:0;background-image:linear-gradient(rgba(200,169,110,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(200,169,110,0.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.container{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 20px;display:flex;flex-direction:column;min-height:100vh}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+.eyebrow{font-size:9px;letter-spacing:4px;color:#C8A96E;margin-bottom:4px;text-transform:uppercase}
+.h1{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.5px}
+.header-right{display:flex;gap:10px;align-items:center}
+.step-counter{font-size:10px;color:#4a4030;letter-spacing:1px}
+.btn-auto{background:transparent;color:#C8A96E;border:1px solid #C8A96E44;padding:8px 18px;font-family:'DM Mono',monospace;letter-spacing:2px;font-size:10px;cursor:pointer;transition:all 0.2s}
+.btn-auto:hover{border-color:#C8A96E88;background:#C8A96E11}
+.btn-auto.active{background:#C8A96E;color:#0a0a0f}
+.step-nav{display:flex;gap:6px;margin-bottom:22px;overflow-x:auto;padding-bottom:4px}
+.step-btn{background:transparent;border:none;cursor:pointer;flex-shrink:0;padding:0}
+.step-inner{padding:8px 14px;border:1px solid #2a2820;background:transparent;text-align:left;min-width:86px;transition:all 0.2s}
+.step-inner:hover{border-color:#C8A96E44!important}
+.step-inner.active{border-color:#C8A96E66!important;background:#1a1610}
+.step-inner.done{border-color:#6ec87a33!important;background:#0a120a}
+.step-icon{font-size:8px;letter-spacing:2px;color:#3a3020;margin-bottom:3px;text-transform:uppercase}
+.step-inner.active .step-icon{color:#C8A96E}
+.step-inner.done .step-icon{color:#6ec87a}
+.step-label{font-size:9px;color:#4a4030}
+.step-inner.active .step-label{color:#e8e4d9}
+.step-inner.done .step-label{color:#7a9060}
+.content-grid{display:grid;grid-template-columns:280px 1fr;gap:18px;flex:1}
+.left-panel{display:flex;flex-direction:column;gap:12px}
+.info-card{background:#11110f;border:1px solid #C8A96E33;padding:18px 20px}
+.info-title{font-size:9px;letter-spacing:3px;color:#C8A96E;margin-bottom:8px;text-transform:uppercase}
+.info-desc{font-size:11px;color:#9a9080;line-height:1.8}
+.side-card{background:#11110f;border:1px solid #2a2820;padding:14px 16px}
+.side-title{font-size:8px;letter-spacing:3px;color:#5a5040;margin-bottom:10px;text-transform:uppercase}
+.role-row{display:flex;gap:8px;margin-bottom:6px}
+.nav-btns{display:flex;gap:8px;margin-top:auto}
+.nav-btn{flex:1;padding:9px;font-size:10px;cursor:pointer;transition:all 0.2s;letter-spacing:1px;border:none}
+.nav-prev{background:transparent;border:1px solid #2a2820;color:#C8A96E;font-family:'DM Mono',monospace}
+.nav-prev:disabled{color:#2a2820;cursor:not-allowed}
+.nav-next{background:#C8A96E;color:#0a0a0f;font-family:'Syne',sans-serif;font-weight:700}
+.nav-next:disabled{background:transparent;color:#2a2820;cursor:not-allowed;border:1px solid #2a2820}
+.screen-wrap{background:#0d0c09;border:1px solid #2a2820;display:flex;flex-direction:column;overflow:hidden;min-height:480px}
+.browser-bar{background:#111110;border-bottom:1px solid #2a2820;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.dots{display:flex;gap:5px}
+.dot{width:9px;height:9px;border-radius:50%}
+.url-bar{flex:1;background:#0a0a0f;border:1px solid #1e1c18;padding:3px 12px;font-size:9px;color:#4a4030;border-radius:3px;letter-spacing:1px;font-family:'DM Mono',monospace}
+.screen-body{flex:1;overflow-y:auto;overflow-x:hidden;position:relative}
+.kpi-bar{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+.kpi-card{flex:1;min-width:130px;background:#11110f;border:1px solid #2a2820;padding:10px 14px;display:flex;gap:10px;align-items:center}
+.kpi-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#C8A96E;flex-shrink:0}
+.kpi-label{font-size:8px;color:#7a7060;letter-spacing:1px;text-transform:uppercase}
+.kpi-desc{font-size:9px;color:#4a4030}
+.metric-tab{background:#11110f;border:1px solid #2a2820;padding:10px 8px;text-align:center;cursor:pointer;transition:all 0.2s}
+.metric-tab.active{background:#1a1610;border-color:#C8A96E55;transform:translateY(-2px)}
+.aud-chip{padding:8px 16px;border:1px solid #2a2820;font-size:10px;letter-spacing:1px;color:#3a3020;text-transform:uppercase;display:flex;align-items:center;gap:6px;transition:all 0.4s}
+.pub-step{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:#11110f;border:1px solid #2a2820;transition:all 0.4s;margin-bottom:10px}
+.pub-step.done{border-color:#6ec87a33}
+.pub-step.active{border-color:#C8A96E33}
+.pub-circle{width:20px;height:20px;border-radius:50%;border:2px solid #2a2820;display:flex;align-items:center;justify-content:center;font-size:9px;color:#3a3020;flex-shrink:0;transition:all 0.4s}
+.pub-step.done .pub-circle{border-color:#6ec87a;background:#6ec87a22;color:#6ec87a}
+.pub-step.active .pub-circle{border-color:#C8A96E;color:#C8A96E}
+@media(max-width:750px){.content-grid{grid-template-columns:1fr}.left-panel{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="container">
+    <div class="header">
+      <div>
+        <div class="eyebrow">KOA PMO Intelligence Suite</div>
+        <div class="h1">WORKFLOW <span style="color:#C8A96E">WALKTHROUGH</span></div>
+      </div>
+      <div class="header-right">
+        <button class="btn-auto" id="autoBtn" onclick="toggleAuto()">▶ AUTO-PLAY</button>
+        <div class="step-counter" id="counter">1 / 8</div>
+      </div>
+    </div>
+    <div class="step-nav" id="stepNav"></div>
+    <div class="content-grid">
+      <div class="left-panel">
+        <div class="info-card">
+          <div class="info-title" id="infoTitle"></div>
+          <div class="info-desc" id="infoDesc"></div>
+        </div>
+        <div class="side-card">
+          <div class="side-title">Roles &amp; Guardrails</div>
+          <div class="role-row"><span style="font-size:8px;color:#C8A96E;min-width:36px">PM</span><span style="font-size:9px;color:#6a6050">Approves AI content before distribution</span></div>
+          <div class="role-row"><span style="font-size:8px;color:#6EB5C8;min-width:36px">Comms</span><span style="font-size:9px;color:#6a6050">Provides audience templates</span></div>
+          <div class="role-row"><span style="font-size:8px;color:#C86E9A;min-width:36px">IT/Sec</span><span style="font-size:9px;color:#6a6050">Reviews ClickUp access &amp; permissions</span></div>
+          <div class="role-row"><span style="font-size:8px;color:#6ec87a;min-width:36px">AI</span><span style="font-size:9px;color:#6a6050">Drafts only — [FACT] vs [AI INFERENCE]</span></div>
+        </div>
+        <div class="side-card">
+          <div class="side-title">Adoption Timeline</div>
+          <div style="display:flex;gap:8px;margin-bottom:5px"><span style="font-size:8px;color:#6ec87a;min-width:42px">✓ 30-day</span><span style="font-size:9px;color:#6a8060">Status drafter from PMO dashboard</span></div>
+          <div style="display:flex;gap:8px;margin-bottom:5px" id="tl60"><span style="font-size:8px;color:#3a3020;min-width:42px">60-day</span><span style="font-size:9px;color:#3a3020">Hybrid delivery integration</span></div>
+          <div style="display:flex;gap:8px" id="tl90"><span style="font-size:8px;color:#3a3020;min-width:42px">90-day</span><span style="font-size:9px;color:#3a3020">Exec dashboard rollup</span></div>
+        </div>
+        <div class="nav-btns">
+          <button class="nav-btn nav-prev" id="prevBtn" onclick="goTo(cur-1)">← PREV</button>
+          <button class="nav-btn nav-next" id="nextBtn" onclick="goTo(cur+1)">NEXT →</button>
+        </div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <div class="dots">
+            <div class="dot" style="background:#ff6b6b33;border:1px solid #ff6b6b44"></div>
+            <div class="dot" style="background:#C8A96E33;border:1px solid #C8A96E44"></div>
+            <div class="dot" style="background:#6ec87a33;border:1px solid #6ec87a44"></div>
+          </div>
+          <div class="url-bar" id="urlBar">koa-pmo.internal/</div>
+          <div style="font-size:8px;color:#3a3020;letter-spacing:1px">🔒 SECURE</div>
+        </div>
+        <div class="screen-body" id="screenBody"></div>
+      </div>
+    </div>
+    <div class="kpi-bar">
+      <div class="kpi-card"><div class="kpi-val">50–70%</div><div><div class="kpi-label">Time Saved</div><div class="kpi-desc">faster status production</div></div></div>
+      <div class="kpi-card"><div class="kpi-val">3</div><div><div class="kpi-label">Audiences</div><div class="kpi-desc">Exec · Team · Ext. SME</div></div></div>
+      <div class="kpi-card"><div class="kpi-val">-60%</div><div><div class="kpi-label">Decision Latency</div><div class="kpi-desc">faster escalation</div></div></div>
+      <div class="kpi-card"><div class="kpi-val">3</div><div><div class="kpi-label">Reports / Click</div><div class="kpi-desc">generated simultaneously</div></div></div>
+    </div>
+  </div>
+</div>
+<script>
+var cur=0, autoOn=false, autoTimer=null, screenTimers=[], typeTimer=null;
+
+var STEPS=[
+  {id:"intro",    label:"Overview",   icon:"◆"},
+  {id:"login",    label:"Login",      icon:"01"},
+  {id:"projects", label:"Projects",   icon:"02"},
+  {id:"metrics",  label:"Metrics",    icon:"03"},
+  {id:"drilldown",label:"Drill-Down", icon:"04"},
+  {id:"generate", label:"Generate",   icon:"05"},
+  {id:"reports",  label:"Reports",    icon:"06"},
+  {id:"publish",  label:"Publish",    icon:"07"}
+];
+
+var INFO={
+  intro:    {title:"Workflow Overview",         desc:"Full end-to-end PMO status report automation — from secure login to ClickUp publishing in under 3 minutes."},
+  login:    {title:"Step 1 · Secure Login",     desc:"Employee enters their ID (e.g. EMP004). Role determines which reports they can generate — Exec sponsors only see Executive; PMs see all three."},
+  projects: {title:"Step 2 · Select a Project", desc:"Live projects show RAG color, sparkline trend, and a live pulse. Inactive projects are greyed out and unclickable. Click a live project to open."},
+  metrics:  {title:"Step 3 · Review Metrics",   desc:"Six metric tabs load instantly from project data. Each has a live visual. Click any tab to drill into the detail panel below."},
+  drilldown:{title:"Step 4 · Drill-Down",       desc:"Clicking a metric opens a rich panel with risk register items, decision queues, and milestone data — all from live project data."},
+  generate: {title:"Step 5 · Generate Reports", desc:"One click sends project context to Claude. All audience-appropriate reports generate in parallel, labeled [FACT] vs [AI INFERENCE]."},
+  reports:  {title:"Step 6 · Review & Edit",    desc:"Reports display with audience tabs. PM reviews AI content, edits if needed, then approves for distribution. Copy or download per audience."},
+  publish:  {title:"Step 7 · Publish to ClickUp",desc:"Approved reports are published as a timestamped ClickUp task, tagged and archived under Project Deliverables automatically."}
+};
+
+var EXEC="STATUS SUMMARY [FACT]\n━━━━━━━━━━━━━━━━━━━━\nRAG Status: 🔴 RED — Project at critical risk. Executive Dashboard Rollup is 78% complete but faces a P1 data pipeline failure threatening the March 28 go-live.\n\nKEY RISKS [FACT]\n━━━━━━━━━━━━━━━━━━━━\n▸ CRITICAL: Staging pipeline failure — P1 incident open, go-live in jeopardy\n▸ HIGH: Budget at ceiling; $168k of $175k spent (+12%) [AI INFERENCE: contractor likely needed]\n\nDECISIONS NEEDED THIS WEEK\n━━━━━━━━━━━━━━━━━━━━\n1. Approve emergency budget of +$22k for contractor remediation\n2. Authorize go-live delay to Apr 4 OR accept partial rollout Mar 28\n3. Escalate P1 incident to CTO for executive visibility\n\nVARIANCE [FACT]\n━━━━━━━━━━━━━━━━━━━━\nSchedule: -18% (behind plan)\nBudget: +12% (over allocation)";
+var TEAM="THIS WEEK'S WINS [FACT]\n━━━━━━━━━━━━━━━━━━━━\n✓ 5 of 6 milestones complete — strong execution by dev team\n✓ Front-end layer 100% complete and QA-signed\n✓ API integration layer stable across all endpoints\n\nBLOCKERS & OWNERS\n━━━━━━━━━━━━━━━━━━━━\n🔴 P1 BLOCKER: Data pipeline failure in staging env\n   Owner: DevOps (Raj Kumar) | Due: Mar 12 | Status: Active\n🟡 Cloud provisioning approval pending\n   Owner: IT Operations | Due: Mar 13 | Escalation needed\n\nTASKS AT RISK [FACT]\n━━━━━━━━━━━━━━━━━━━━\n▸ 22 tasks blocked — highest count this sprint\n▸ 14 tasks overdue — action required from team leads\n▸ Final QA Sign-off (Mar 18) at risk if pipeline not fixed by Mar 13\n\nACTION ITEMS\n━━━━━━━━━━━━━━━━━━━━\n→ Raj Kumar: Resolve pipeline P1 by EOD Mar 12\n→ Jordan Lee: Get IT provisioning approved by Mar 13\n→ Priya Nair: Draft go-live delay memo for exec sign-off";
+
+function qs(id){return document.getElementById(id);}
+function clearTimers(){screenTimers.forEach(function(t){clearTimeout(t);}); screenTimers=[];}
+function st(fn,ms){var t=setTimeout(fn,ms);screenTimers.push(t);return t;}
+function spark(d,c){
+  var max=Math.max.apply(null,d),min=Math.min.apply(null,d),w=70,h=24;
+  var pts=d.map(function(v,i){return (i/(d.length-1)*w)+","+(h-((v-min)/(max-min+1))*h);}).join(" ");
+  var lp=pts.split(" ").pop().split(",");
+  return '<svg viewBox="0 0 '+w+' '+h+'" style="width:60px;height:20px"><polyline points="'+pts+'" fill="none" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="'+lp[0]+'" cy="'+lp[1]+'" r="2.5" fill="'+c+'"/></svg>';
+}
+function donut(pct,color,sz){
+  sz=sz||56;var r=sz/2-7,circ=2*Math.PI*r,dash=(pct/100)*circ;
+  return '<svg width="'+sz+'" height="'+sz+'" style="transform:rotate(-90deg)"><circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+r+'" fill="none" stroke="#1e1c18" stroke-width="6"/><circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="6" stroke-dasharray="'+dash+' '+circ+'" stroke-linecap="round"/></svg>';
+}
+
+// ── SCREENS ───────────────────────────────────────────────────────────────────
+function sIntro(){
+  return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:32px;text-align:center;animation:fadeIn 0.4s ease">'+
+  '<div style="font-size:9px;letter-spacing:5px;color:#C8A96E;margin-bottom:12px;text-transform:uppercase">KOA PMO Intelligence Suite</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1.05;margin-bottom:16px">STATUS REPORT<br/><span style="color:#C8A96E">AUTOMATION</span></div>'+
+  '<div style="font-size:11px;color:#7a7060;max-width:300px;line-height:1.8;margin-bottom:22px">End-to-end workflow: Employee login → project selection → live metrics → AI report generation → ClickUp publishing</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:320px">'+
+  [["🔐","Secure Login","Role-based access"],["📋","Live Projects","RAG status + metrics"],["📊","Visual Metrics","6 clickable drill-downs"],["🤖","AI Reports","3 audience variants"],["✅","PM Review","Approval workflow"],["📤","Publish","ClickUp integration"]].map(function(f){
+    return '<div style="background:#11110f;border:1px solid #2a2820;padding:10px 12px;text-align:left"><div style="font-size:14px;margin-bottom:4px">'+f[0]+'</div><div style="font-size:10px;color:#e8e4d9">'+f[1]+'</div><div style="font-size:9px;color:#5a5040">'+f[2]+'</div></div>';
+  }).join('')+'</div></div>';
+}
+
+function sLogin(){
+  var html='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:32px;animation:fadeIn 0.4s ease">'+
+  '<div style="font-size:9px;letter-spacing:5px;color:#C8A96E;margin-bottom:10px;text-transform:uppercase">KOA PMO Intelligence Suite</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:28px;font-weight:800;letter-spacing:-1px;color:#e8e4d9;margin-bottom:24px;text-align:center;line-height:1.1">STATUS<br/><span style="color:#C8A96E">PORTAL</span></div>'+
+  '<div style="background:#0f0e0c;border:1px solid #2a2820;padding:24px 28px;width:100%;max-width:300px">'+
+  '<div style="font-size:9px;letter-spacing:3px;color:#4a4030;margin-bottom:12px;text-align:center;text-transform:uppercase">Employee ID</div>'+
+  '<div id="ldisplay" style="background:#0a0a0f;border:1px solid #C8A96E44;padding:14px 16px;font-family:DM Mono,monospace;font-size:20px;letter-spacing:10px;text-align:center;color:#e8e4d9;min-height:52px;display:flex;align-items:center;justify-content:center;transition:border-color 0.4s">'+
+  '<span id="ltyped"></span><span class="blink" id="lcursor" style="color:#C8A96E">|</span></div>'+
+  '<div id="lbtn" style="margin-top:14px;background:#3a3020;color:#5a5040;padding:10px;text-align:center;font-family:Syne,sans-serif;font-weight:700;font-size:11px;letter-spacing:2px;transition:all 0.4s">ACCESS PORTAL →</div>'+
+  '<div id="lwelcome" style="display:none;margin-top:10px;padding:8px 12px;background:#C8A96E11;border:1px solid #C8A96E33;font-size:10px;color:#C8A96E;text-align:center">Welcome, Jordan Lee · PMO Director</div>'+
+  '</div></div>';
+  st(function(){
+    var i=0,target="EMP004";
+    var t=setInterval(function(){
+      i++; var el=qs('ltyped'); if(el) el.textContent=target.slice(0,i);
+      if(i>=target.length){
+        clearInterval(t);
+        st(function(){
+          var d=qs('ldisplay'),b=qs('lbtn'),c=qs('lcursor'),w=qs('lwelcome');
+          if(d) d.style.borderColor='#6ec87a66';
+          if(b){b.style.background='#C8A96E';b.style.color='#0a0a0f';b.textContent='✓  ACCESS GRANTED';}
+          if(c) c.style.opacity='0';
+          if(w) w.style.display='block';
+        },500);
+      }
+    },120);
+  },300);
+  return html;
+}
+
+function sProjects(){
+  var rc={Green:"#6ec87a",Amber:"#C8A96E",Red:"#ff6b6b",Grey:"#3a3a3a"};
+  var projs=[
+    {n:"KOA PMO Digital Transformation",r:"Amber",pct:61,bl:12,live:true},
+    {n:"Hybrid Workforce Enablement",r:"Green",pct:34,bl:3,live:true},
+    {n:"Executive Dashboard Rollup",r:"Red",pct:78,bl:22,live:true},
+    {n:"Vendor Contract Modernization",r:"Grey",pct:22,bl:35,live:false},
+    {n:"PMO Capability Maturity Program",r:"Grey",pct:100,bl:0,live:false}
+  ];
+  var rows=projs.map(function(p,i){
+    var c=rc[p.r];
+    return '<div id="prow'+i+'" style="background:'+(p.live?'#11110f':'#0d0d0d')+';border:1px solid '+(p.live?'#2a2820':'#161616')+';padding:9px 12px;margin-bottom:6px;position:relative;opacity:'+(p.live?1:0.38)+';transition:all 0.3s">'+
+    (p.live?'<div style="position:absolute;top:0;left:0;width:3px;height:100%;background:'+c+'"></div>':'')+
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding-left:'+(p.live?'10px':'0')+'">'+
+    '<div><div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'+
+    '<span style="font-size:11px;font-family:Syne,sans-serif;font-weight:700;color:'+(p.live?'#e8e4d9':'#3a3a3a')+'">'+p.n+'</span>'+
+    (p.live?'<span style="font-size:7px;color:#6ec87a;letter-spacing:2px;display:flex;align-items:center;gap:3px"><span class="pulse" style="width:4px;height:4px;border-radius:50%;background:#6ec87a;display:inline-block"></span>LIVE</span>':'')+
+    '</div>'+
+    (p.live?'<div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:3px;background:#1e1c18;border-radius:2px"><div style="height:100%;width:'+p.pct+'%;background:'+c+';border-radius:2px"></div></div><span style="font-size:9px;color:#7a7060">'+p.pct+'%</span>'+(p.bl>5?'<span style="font-size:8px;color:#ff6b6b">⚠ '+p.bl+' blocked</span>':'')+'</div>':'')+
+    '</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
+    '<div style="font-size:8px;color:'+c+';letter-spacing:2px;padding:2px 8px;background:'+c+'18;border:1px solid '+c+'33">'+p.r+'</div>'+
+    (p.live?spark([55,62,68,73,78],c):'')+
+    '</div></div>'+
+    (i===2?'<div id="clickhint" style="display:none;position:absolute;right:10px;bottom:6px;font-size:8px;color:#ff6b6b;letter-spacing:1px">← CLICK TO OPEN</div>':'')+
+    '</div>';
+  }).join('');
+  var html='<div style="padding:20px 24px;animation:fadeIn 0.4s ease">'+
+  '<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;margin-bottom:4px">PROJECT <span style="color:#C8A96E">DASHBOARD</span></div>'+
+  '<div style="font-size:9px;color:#5a5040;letter-spacing:2px;margin-bottom:12px">Jordan Lee · PMO Director · ALL ACCESS</div>'+
+  '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'+
+  '<div style="background:#11110f;border:1px solid #6ec87a22;padding:5px 10px"><div style="font-size:7px;letter-spacing:2px;color:#5a5040">LIVE</div><div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#6ec87a">3</div></div>'+
+  '<div style="background:#11110f;border:1px solid #3a3a3a22;padding:5px 10px"><div style="font-size:7px;letter-spacing:2px;color:#5a5040">INACTIVE</div><div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#3a3a3a">2</div></div>'+
+  '<div style="background:#11110f;border:1px solid #ff6b6b22;padding:5px 10px"><div style="font-size:7px;letter-spacing:2px;color:#5a5040">CRITICAL</div><div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#ff6b6b">1</div></div>'+
+  '</div>'+rows+'</div>';
+  var seq=[0,1,2,-1],si=0;
+  function tick(){
+    var prev=si>0?seq[si-1]:-1,v=seq[si];si++;
+    if(prev>=0){var ep=qs('prow'+prev);if(ep){ep.style.background='#11110f';ep.style.borderColor='#2a2820';ep.style.transform='';ep.style.boxShadow='';}}
+    if(v>=0){var ev=qs('prow'+v);if(ev){ev.style.background='#1a0a08';ev.style.borderColor='#ff6b6b66';ev.style.transform='translateY(-1px)';ev.style.boxShadow='0 4px 20px #ff000033';}}
+    if(v===2){var ch=qs('clickhint');if(ch)ch.style.display='block';}
+    if(si<seq.length) st(tick,400);
+  }
+  st(tick,300);
+  return html;
+}
+
+var activeMTab=null;
+function sMetrics(){
+  activeMTab=null;
+  var tabs=[["78%","Completion","#ff6b6b"],["−18%","Schedule","#ff6b6b"],["3 active","Top Risks","#ff6b6b"],["3 pending","Decisions","#C8A96E"],["5/6","Milestones","#C8A96E"],["+12%","Budget","#ff6b6b"]];
+  var html='<div style="padding:18px 20px;animation:fadeIn 0.4s ease">'+
+  '<div style="font-family:Syne,sans-serif;font-size:13px;font-weight:800;margin-bottom:2px">Executive Dashboard Rollup</div>'+
+  '<div style="font-size:9px;color:#ff6b6b;letter-spacing:2px;margin-bottom:14px;display:flex;align-items:center;gap:6px">'+
+  '<span style="padding:2px 8px;background:#ff000018;border:1px solid #ff000033">RED</span>'+
+  '<span style="color:#5a5040">Phase 3 — Build · Due Mar 28</span></div>'+
+  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px">'+
+  tabs.map(function(t,i){return '<div class="metric-tab" id="mt'+i+'" onclick="toggleMTab('+i+')" style="cursor:pointer">'+
+    '<div style="font-family:Syne,sans-serif;font-size:14px;font-weight:800;color:'+t[2]+';margin-bottom:2px">'+t[0]+'</div>'+
+    '<div style="font-size:8px;letter-spacing:1px;color:#5a5040;text-transform:uppercase">'+t[1]+'</div>'+
+    '<div id="mta'+i+'" style="font-size:8px;color:#3a3020;margin-top:2px">▼</div></div>';}).join('')+
+  '</div><div id="drillA"></div></div>';
+  var seq=[null,0,1,2,null],si=0;
+  function tick(){var v=seq[si];si++;setMTab(v);if(si<seq.length)st(tick,700);}
+  st(tick,300);
+  return html;
+}
+function setMTab(idx){
+  for(var i=0;i<6;i++){
+    var el=qs('mt'+i),ar=qs('mta'+i);
+    if(el){el.classList.toggle('active',i===idx);}
+    if(ar){ar.textContent=i===idx?'▲':'▼';}
+  }
+  activeMTab=idx;
+  var a=qs('drillA');if(!a)return;
+  if(idx===null){a.innerHTML='';return;}
+  var c='';
+  if(idx===0){c='<div style="display:flex;gap:16px;align-items:center"><div style="position:relative;display:flex;align-items:center;justify-content:center;width:56px;height:56px;flex-shrink:0">'+donut(78,'#ff6b6b',56)+'<div style="position:absolute;font-family:Syne,sans-serif;font-size:10px;font-weight:800;color:#e8e4d9">78%</div></div><div style="flex:1">'+[['Done',87,'#6ec87a'],['Blocked',22,'#ff6b6b'],['Overdue',14,'#C8A96E']].map(function(r){return '<div style="display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #1e1c18;padding:3px 0"><span style="color:#7a7060">'+r[0]+'</span><span style="color:'+r[2]+';font-weight:700">'+r[1]+'</span></div>';}).join('')+'</div></div>';}
+  else if(idx===1){c=[['Schedule','−18%'],['Budget','+12%']].map(function(r){return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:10px;color:#7a7060;margin-bottom:3px"><span>'+r[0]+' Variance</span><span style="color:#ff6b6b;font-weight:700">'+r[1]+'</span></div><div style="height:5px;background:#1e1c18;border-radius:3px"><div style="height:100%;width:'+Math.min(Math.abs(parseFloat(r[1]))*4,100)+'%;background:#ff6b6b;border-radius:3px"></div></div></div>';}).join('');}
+  else if(idx===2){c=["Critical blocker: data pipeline failure (HIGH)","Budget overrun if delayed (HIGH)","Key dev on leave Mar 14-21 (HIGH)"].map(function(r){return '<div style="padding:5px 8px;margin-bottom:4px;background:#11110f;border-left:2px solid #ff6b6b44;font-size:10px;color:#ff9966;line-height:1.5">'+r+'</div>';}).join('');}
+  a.innerHTML='<div style="background:#13120e;border:1px solid #C8A96E22;padding:12px 14px;animation:fadeIn 0.3s ease"><div style="font-size:9px;color:#C8A96E;letter-spacing:2px;margin-bottom:8px;text-transform:uppercase">Detail</div>'+c+'</div>';
+}
+function toggleMTab(idx){setMTab(activeMTab===idx?null:idx);}
+
+function sDrilldown(){
+  return '<div style="padding:16px 20px;animation:fadeIn 0.4s ease">'+
+  '<div style="font-size:9px;color:#C8A96E;letter-spacing:3px;margin-bottom:12px;text-transform:uppercase">◆ Decisions Drill-Down</div>'+
+  ["Approve emergency budget +$22k","Authorize go-live delay to Apr 4","Escalate P1 incident to CTO"].map(function(d,i){
+    return '<div style="display:flex;gap:10px;padding:10px 12px;background:#0d0c09;border:1px solid #C8A96E22;margin-bottom:6px;animation:fadeIn 0.4s ease '+(i*0.15)+'s both"><div style="width:20px;height:20px;background:#C8A96E22;border:1px solid #C8A96E44;display:flex;align-items:center;justify-content:center;font-size:9px;color:#C8A96E;flex-shrink:0;font-family:Syne,sans-serif;font-weight:800">'+(i+1)+'</div><div style="font-size:11px;color:#9a9080;line-height:1.5">'+d+'</div></div>';
+  }).join('')+
+  '<div style="font-size:9px;color:#6EB5C8;letter-spacing:3px;margin:14px 0 10px;text-transform:uppercase">◈ Risk Register</div>'+
+  ["Critical blocker: data pipeline failure (HIGH)","Budget overrun likely if delayed (HIGH)","Key developer on leave Mar 14-21 (HIGH)"].map(function(r,i){
+    return '<div style="padding:8px 10px;margin-bottom:5px;background:#0d0c09;border-left:3px solid #ff6b6b44;font-size:10px;color:#ff9966;line-height:1.5;animation:fadeIn 0.4s ease '+(i*0.15+0.4)+'s both"><span style="font-size:8px;color:#ff6b6b;letter-spacing:2px;display:block;margin-bottom:2px">HIGH RISK</span>'+r+'</div>';
+  }).join('')+
+  '<div style="margin-top:12px;padding:10px 14px;background:#11110f;border:1px solid #2a2820;font-size:10px;color:#5a5040;line-height:1.6">◆ Budget: $168k of $175k spent (+12%) · Schedule: −18% behind plan</div>'+
+  '</div>';
+}
+
+function sGenerate(){
+  var html='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:20px 24px;animation:fadeIn 0.4s ease">'+
+  '<div style="font-family:Syne,sans-serif;font-size:14px;font-weight:800;margin-bottom:4px">Generating Reports</div>'+
+  '<div style="font-size:9px;color:#5a5040;margin-bottom:28px;letter-spacing:2px">EXECUTIVE DASHBOARD ROLLUP</div>'+
+  '<div style="display:flex;gap:12px;margin-bottom:28px;flex-wrap:wrap;justify-content:center">'+
+  [["chip-e","◆ Executive","#C8A96E"],["chip-t","◈ Team","#6EB5C8"],["chip-s","◉ Ext. SME","#C86E9A"]].map(function(c){
+    return '<div class="aud-chip" id="'+c[0]+'">'+c[1]+'</div>';
+  }).join('')+'</div>'+
+  '<div id="gstat" style="text-align:center;min-height:60px"></div>'+
+  '<div id="gdone" style="display:none;text-align:center;animation:fadeIn 0.4s ease">'+
+  '<div style="font-size:28px;color:#6ec87a;margin-bottom:8px">✓</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:14px;font-weight:800;color:#6ec87a;margin-bottom:4px">3 Reports Ready</div>'+
+  '<div style="font-size:10px;color:#5a5040;letter-spacing:1px">PM REVIEW REQUIRED BEFORE DISTRIBUTION</div></div>'+
+  '<div style="margin-top:24px;background:#11110f;border:1px solid #2a2820;padding:10px 16px;width:100%;max-width:320px">'+
+  '<div style="font-size:8px;color:#5a5040;letter-spacing:2px;margin-bottom:6px">AI CHANGE LOG</div>'+
+  '<div style="font-size:9px;color:#4a4030;line-height:1.8">Model: claude-sonnet-4-20250514<br/>User: Jordan Lee (EMP004)<br/>Project: Executive Dashboard Rollup</div>'+
+  '</div></div>';
+
+  function chipDone(id,c){var el=qs(id);if(el){el.style.borderColor=c+'66';el.style.background=c+'11';el.style.color=c;el.innerHTML='✓ '+el.innerHTML.replace('✓ ','');}}
+  function setStatus(msg){var el=qs('gstat');if(!el)return;el.innerHTML=msg?'<div class="spin" style="font-size:22px;color:#C8A96E;margin-bottom:8px">◆</div><div class="pulse" style="font-size:10px;color:#C8A96E;letter-spacing:2px">'+msg+'</div>':'';}
+
+  st(function(){
+    setStatus('Drafting Executive report...');
+    st(function(){
+      chipDone('chip-e','#C8A96E');
+      setStatus('Drafting Team report...');
+      st(function(){
+        chipDone('chip-t','#6EB5C8');
+        setStatus('Drafting External SME report...');
+        st(function(){
+          chipDone('chip-s','#C86E9A');
+          setStatus('');
+          var d=qs('gdone');if(d)d.style.display='block';
+        },900);
+      },1000);
+    },1100);
+  },300);
+  return html;
+}
+
+var activeRTab='executive', rTypeInterval=null;
+function sReports(){
+  activeRTab='executive';
+  var html='<div style="display:flex;flex-direction:column;height:100%;animation:fadeIn 0.4s ease">'+
+  '<div style="display:flex;border-bottom:1px solid #2a2820;flex-shrink:0">'+
+  [["executive","◆ Executive","#C8A96E"],["team","◈ Team","#6EB5C8"],["external","◉ Ext. SME","#C86E9A"]].map(function(a){
+    return '<button id="rtab-'+a[0]+'" onclick="switchRTab(\''+a[0]+'\')" style="background:transparent;border:none;padding:7px 12px;font-size:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-family:DM Mono,monospace;border-bottom:2px solid '+(a[0]==='executive'?a[2]:'transparent')+';margin-bottom:-1px;color:'+(a[0]==='executive'?a[2]:'#5a5040')+';transition:all 0.2s">'+a[1]+'</button>';
+  }).join('')+'</div>'+
+  '<div id="rbody" style="flex:1;overflow-y:auto;background:#1a1208;border:1px solid #C8A96E22;border-top:none;padding:14px 16px">'+
+  '<pre id="rpre" style="white-space:pre-wrap;font-family:DM Mono,monospace;font-size:10px;line-height:1.7;color:#ccc8be;margin:0"></pre></div>'+
+  '<div style="display:flex;gap:6px;margin-top:8px;flex-shrink:0">'+
+  '<div style="flex:1;padding:6px 10px;background:#11110f;border:1px solid #2a2820;font-size:8px;color:#5a5040;letter-spacing:1px">⚠ PM APPROVAL REQUIRED · [AI INFERENCE] labeled</div>'+
+  '<div onclick="copyRpt()" style="padding:6px 10px;background:#C8A96E22;border:1px solid #C8A96E44;font-size:8px;color:#C8A96E;cursor:pointer;letter-spacing:1px">COPY</div>'+
+  '</div></div>';
+  st(function(){typeR(EXEC);},300);
+  return html;
+}
+function typeR(text){
+  if(rTypeInterval)clearInterval(rTypeInterval);
+  var el=qs('rpre');if(!el)return;
+  el.textContent='';var lines=text.split('\n'),i=0;
+  rTypeInterval=setInterval(function(){
+    i++;var e=qs('rpre');if(!e){clearInterval(rTypeInterval);return;}
+    e.textContent=lines.slice(0,i).join('\n');
+    if(i<lines.length)e.textContent+='\n▋';
+    if(i>=lines.length)clearInterval(rTypeInterval);
+  },55);
+}
+function switchRTab(aud){
+  activeRTab=aud;
+  var cols={executive:'#C8A96E',team:'#6EB5C8',external:'#C86E9A'};
+  var bgs={executive:'#1a1208',team:'#08141a',external:'#1a0812'};
+  ['executive','team','external'].forEach(function(a){
+    var b=qs('rtab-'+a);
+    if(b){b.style.color=a===aud?cols[a]:'#5a5040';b.style.borderBottom=a===aud?'2px solid '+cols[a]:'2px solid transparent';}
+  });
+  var rb=qs('rbody');
+  if(rb){rb.style.background=bgs[aud];rb.style.borderColor=cols[aud]+'22';}
+  var txt=aud==='executive'?EXEC:aud==='team'?TEAM:'[External SME report available to users with SME access role.\nLogin with EMP005 to view this report.]';
+  typeR(txt);
+}
+function copyRpt(){var e=qs('rpre');if(e&&navigator.clipboard)navigator.clipboard.writeText(e.textContent);}
+
+function sPublish(){
+  var steps=[["PM Review & Approval","Jordan Lee approved all 3 reports"],["Publish to ClickUp Dashboard","Task created: PMO Status Report — Mar 9, 2026"],["Archive Under Project Deliverables","Archived in: KOA PMO / Status Reports"]];
+  var html='<div style="padding:20px 24px;display:flex;flex-direction:column;justify-content:center;min-height:100%;animation:fadeIn 0.4s ease">'+
+  '<div style="font-family:Syne,sans-serif;font-size:14px;font-weight:800;margin-bottom:20px;text-align:center">Publishing to <span style="color:#C8A96E">ClickUp</span></div>'+
+  steps.map(function(s,i){
+    return '<div class="pub-step" id="ps'+i+'"><div class="pub-circle" id="pc'+i+'">'+(i+1)+'</div><div><div style="font-size:11px;color:#5a5040;transition:color 0.3s" id="pn'+i+'">'+s[0]+'</div><div id="pnt'+i+'" style="display:none;font-size:9px;color:#6ec87a;margin-top:2px;letter-spacing:1px">✓ '+s[1]+'</div></div></div>';
+  }).join('')+
+  '<div id="psuccess" style="display:none">'+
+  '<div style="padding:14px 16px;background:#6ec87a11;border:1px solid #6ec87a44;animation:fadeIn 0.4s ease">'+
+  '<div style="font-family:Syne,sans-serif;font-size:13px;font-weight:800;color:#6ec87a;margin-bottom:6px">✓ Workflow Complete</div>'+
+  '<div style="font-size:10px;color:#6a8060;line-height:1.7">3 audience reports published · Decision log updated<br/>Stakeholders notified · Archived for audit trail</div></div>'+
+  '<div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+  [["~2.5 hrs","Time Saved","#6ec87a"],["3","Reports Generated","#C8A96E"],["3","Audiences Reached","#6EB5C8"],["-60%","Decision Latency","#6ec87a"]].map(function(m){
+    return '<div style="background:#11110f;border:1px solid '+m[2]+'22;padding:8px 12px;text-align:center"><div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:'+m[2]+'">'+m[0]+'</div><div style="font-size:8px;color:#5a5040;letter-spacing:1px;margin-top:2px;text-transform:uppercase">'+m[1]+'</div></div>';
+  }).join('')+'</div></div></div>';
+
+  function adv(i){
+    var s=qs('ps'+i),c=qs('pc'+i),n=qs('pn'+i),nt=qs('pnt'+i);
+    if(s){s.classList.add('done');}
+    if(c){c.textContent='✓';}
+    if(n){n.style.color='#e8e4d9';}
+    if(nt){nt.style.display='block';}
+    if(i<2)st(function(){adv(i+1);},1000);
+    else st(function(){var d=qs('psuccess');if(d)d.style.display='block';},600);
+  }
+  st(function(){var s=qs('ps0');if(s)s.classList.add('active');st(function(){adv(0);},500);},300);
+  return html;
+}
+
+var RENDERERS={intro:sIntro,login:sLogin,projects:sProjects,metrics:sMetrics,drilldown:sDrilldown,generate:sGenerate,reports:sReports,publish:sPublish};
+
+function buildNav(){
+  var nav=qs('stepNav');
+  nav.innerHTML=STEPS.map(function(s,i){
+    var cls='step-inner'+(i===cur?' active':i<cur?' done':'');
+    return '<button class="step-btn" onclick="goTo('+i+')"><div class="'+cls+'" id="si'+i+'"><div class="step-icon">'+(i<cur?'✓ ':'')+s.icon+'</div><div class="step-label">'+s.label+'</div></div></button>';
+  }).join('');
+}
+
+function updateLeft(){
+  var s=STEPS[cur],info=INFO[s.id];
+  qs('infoTitle').textContent=info.title;
+  qs('infoDesc').textContent=info.desc;
+  qs('counter').textContent=(cur+1)+' / '+STEPS.length;
+  qs('urlBar').textContent='koa-pmo.internal/'+(s.id==='intro'?'':s.id);
+  qs('prevBtn').disabled=cur===0;
+  qs('nextBtn').disabled=cur===STEPS.length-1;
+  var tl60=qs('tl60'),tl90=qs('tl90');
+  if(tl60){var d60=cur>=5;tl60.children[0].style.color=d60?'#6ec87a':'#3a3020';tl60.children[0].textContent=(d60?'✓ ':'')+'60-day';tl60.children[1].style.color=d60?'#6a8060':'#3a3020';}
+  if(tl90){var d90=cur>=7;tl90.children[0].style.color=d90?'#6ec87a':'#3a3020';tl90.children[0].textContent=(d90?'✓ ':'')+'90-day';tl90.children[1].style.color=d90?'#6a8060':'#3a3020';}
+}
+
+function goTo(idx){
+  if(idx<0||idx>=STEPS.length)return;
+  clearTimers();
+  if(rTypeInterval){clearInterval(rTypeInterval);rTypeInterval=null;}
+  cur=idx;
+  buildNav();
+  updateLeft();
+  qs('screenBody').innerHTML=RENDERERS[STEPS[idx].id]();
+}
+
+function toggleAuto(){
+  autoOn=!autoOn;
+  var btn=qs('autoBtn');
+  btn.textContent=autoOn?'⏸ PAUSE':'▶ AUTO-PLAY';
+  btn.classList.toggle('active',autoOn);
+  if(autoOn){autoTimer=setInterval(function(){goTo((cur+1)%STEPS.length);},4500);}
+  else{clearInterval(autoTimer);}
+}
+
+goTo(0);
+</script>
+</body>
+</html>
